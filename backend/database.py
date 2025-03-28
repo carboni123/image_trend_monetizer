@@ -1,11 +1,9 @@
 import sqlite3
 import os
 from contextlib import contextmanager
-from dotenv import load_dotenv
 
-load_dotenv()
-
-DATABASE_PATH = os.getenv("DATABASE_PATH")
+DB_SUBDIR = '/app/database'
+DATABASE_PATH = os.path.join(DB_SUBDIR, 'waitlist.db')
 
 @contextmanager
 def get_db_connection():
@@ -95,5 +93,7 @@ def get_request_by_id(req_id):
         request = cursor.fetchone()
         return dict(request) if request else None
 
-# Ensure DB is initialized when this module is imported or run
-init_db() # Call this explicitly from app.py instead
+# --- Initialize DB when module is loaded ---
+print("Initializing DB from database.py module level...")
+init_db()
+print("DB initialization attempt completed from database.py.")
