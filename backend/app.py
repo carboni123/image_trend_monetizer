@@ -1,12 +1,13 @@
 import os
 import uuid
 import mimetypes
-from flask import Flask, request, jsonify, current_app
+from flask import Flask, request, jsonify, current_app, send_from_directory
 from werkzeug.utils import secure_filename
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from flask_mail import Mail, Message # Import Mail and Message
 from dotenv import load_dotenv # Import dotenv
+import logging
 
 # --- Project Specific Imports ---
 import database
@@ -23,6 +24,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 # --- App Initialization ---
 app = Flask(__name__)
+app.logger.setLevel(logging.INFO)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # --- Flask-Mail Configuration ---
@@ -207,6 +209,53 @@ def send_completion_email(request_id):
     except Exception as e:
         app.logger.error(f"Failed to send email for request {request_id} to {recipient_email}: {e}")
         return jsonify({"error": f"Failed to send email. Check server logs for details. Error: {e}"}), 500
+    
+@app.route('/uploads/<path:filepath>')
+# TODO: Add security/authentication later!
+def serve_upload(filepath):
+    # Get configured upload directory safely
+    upload_dir = current_app.config.get('UPLOAD_FOLDER')
+    if not upload_dir:
+        app.logger.error("UPLOAD_FOLDER not configured in Flask app!")
+        return jsonify({"error": "Server configuration error"}), 500
+
+    # Log exactly what's being requested and where we're looking
+    app.logger.info(f"--- Request received for: /uploads/{filepath}")
+    app.logger.info(f"--- Using base upload directory (from config): {upload_dir}")
+
+    # Ensure the base directory path is absolute (important for send_from_directory)
+    absolute_upload_dir = os.path.abspath(upload_dir)
+    app.logger.info(f"--- Absolute base upload directory: {absolute_upload_dir}")
+
+    # Check if the base directory actually exists
+    if not os.path.isdir(absolute_upload_dir):
+         app.logger.error(f"Base upload directory does not exist or is not a directory: {absolute_upload_dir}")
+         return jsonify({"error": "Server configuration error - upload directory missing"}), 500
+
+    # Construct the full path to the requested file
+    full_file_path = os.path.join(absolute_upload_dir, filepath)
+    app.logger.info(f"--- Attempting to serve file from full path: {full_file_path}")
+
+    # Check if the specific file exists BEFORE calling send_from_directory
+    if not os.path.isfile(full_file_path):
+        app.logger.warning(f"File not found at path: {full_file_path}")
+        # You could try listing the directory content here for more debug info if needed
+        # try:
+        #    dir_contents = os.listdir(os.path.dirname(full_file_path))
+        #    app.logger.warning(f"Contents of {os.path.dirname(full_file_path)}: {dir_contents}")
+        # except Exception as list_e:
+        #    app.logger.error(f"Could not list directory {os.path.dirname(full_file_path)}: {list_e}")
+        return jsonify({"error": "File not found by Flask"}), 404 # Return explicit 404
+
+    # If checks pass, attempt to serve the file
+    try:
+        app.logger.info(f"Serving file: {filepath} from directory: {absolute_upload_dir}")
+        # Use as_attachment=False to display inline if browser supports it
+        return send_from_directory(absolute_upload_dir, filepath, as_attachment=False)
+    except Exception as e:
+        # Catch any unexpected errors from send_from_directory
+        app.logger.error(f"Error using send_from_directory for {filepath}: {e}")
+        return jsonify({"error": "Server error serving file"}), 500
     
     
 # --- Main Execution ---
