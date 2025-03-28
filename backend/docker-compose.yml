@@ -38,9 +38,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    # Optional: Expose port 5432 locally IF you need to connect directly from your host machine
-    # ports:
-    #   - "5432:5432"
+    ports:
+      - "5432:5432"
 
 networks:
   backend-net:
