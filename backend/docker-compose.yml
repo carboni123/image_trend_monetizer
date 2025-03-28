@@ -12,7 +12,7 @@ services:
     volumes:
       # Volume paths inside container remain the same
       - uploads_data:/app/uploads
-      - database_data:/app/waitlist.db
+      - database_data:/app/database
     env_file:
       # Look for .env file in the *same directory* as this compose file
       - .env
