@@ -1,0 +1,26 @@
+# image_trend_monetizer/backend/docker-compose.yml
+
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: image_trend_backend
+    restart: unless-stopped
+    networks:
+      - backend-net
+    volumes:
+      # Volume paths inside container remain the same
+      - uploads_data:/app/uploads
+      - database_data:/app/waitlist.db
+    env_file:
+      # Look for .env file in the *same directory* as this compose file
+      - .env
+
+networks:
+  backend-net:
+    external: true
+
+volumes:
+  uploads_data:
+  database_data:

@@ -1,12 +1,17 @@
 import sqlite3
 import os
 from contextlib import contextmanager
+from dotenv import load_dotenv
 
-DATABASE_PATH = os.path.join(os.path.dirname(__file__), 'waitlist.db')
+load_dotenv()
+
+DATABASE_PATH = os.getenv("DATABASE_PATH")
 
 @contextmanager
 def get_db_connection():
     """Provides a database connection context."""
+    # Make sure the directory for the DB exists if needed (though volume mount handles this)
+    # os.makedirs(os.path.dirname(DATABASE_PATH), exist_ok=True) # Optional safety check
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row # Return rows as dict-like objects
     try:
@@ -16,12 +21,16 @@ def get_db_connection():
 
 def init_db():
     """Initializes the database schema if it doesn't exist."""
+    # Check if the file exists at the container path
+    if not os.path.exists(db_dir):
+        print(f"Creating database directory: {db_dir}")
+        os.makedirs(db_dir, exist_ok=True) # Ensure directory exists before connecting
+
     if os.path.exists(DATABASE_PATH):
-        print("Database already exists.")
-        # Optional: Add schema migration logic here if needed later
+        print("Database already exists at container path.")
         return
 
-    print("Initializing database...")
+    print("Initializing database at container path...")
     with get_db_connection() as conn:
         conn.execute('''
             CREATE TABLE requests (
@@ -31,7 +40,7 @@ def init_db():
                 original_image_path TEXT NOT NULL,
                 payment_proof_path TEXT NOT NULL,
                 edited_image_path TEXT,
-                status TEXT NOT NULL DEFAULT 'pending', -- pending, processing, completed, error
+                status TEXT NOT NULL DEFAULT 'pending',
                 submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 completed_at TIMESTAMP
             )
