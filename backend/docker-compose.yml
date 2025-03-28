@@ -1,6 +1,5 @@
 # image_trend_monetizer/backend/docker-compose.yml
-
-version: '3.8'
+# Remove 'version:' line if desired
 
 services:
   backend:
@@ -10,12 +9,38 @@ services:
     networks:
       - backend-net
     volumes:
-      # Volume paths inside container remain the same
+      # Mount uploads directory
       - uploads_data:/app/uploads
-      - database_data:/app/database
+      # REMOVE the old database volume mount
     env_file:
-      # Look for .env file in the *same directory* as this compose file
       - .env
+    depends_on: # Make backend wait for db
+       db:
+         condition: service_healthy # Optional: Wait for healthcheck (see db service)
+
+  db: # New database service
+    image: postgres:15 # Or postgres:latest, or specific minor version
+    container_name: image_trend_db
+    restart: unless-stopped
+    networks:
+      - backend-net
+    environment:
+      # These read from the .env file via ${VAR_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      # Mount a new named volume for Postgres data persistence
+      - pg_data:/var/lib/postgresql/data
+    # Optional Healthcheck: Allows 'depends_on' to wait more reliably
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Optional: Expose port 5432 locally IF you need to connect directly from your host machine
+    # ports:
+    #   - "5432:5432"
 
 networks:
   backend-net:
@@ -23,4 +48,6 @@ networks:
 
 volumes:
   uploads_data:
-  database_data:
+  # Remove old volume if you are sure you don't need the data
+  # database_data:
+  pg_data: # Declare the new volume for Postgres
