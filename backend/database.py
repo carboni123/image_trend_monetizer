@@ -22,6 +22,7 @@ def get_db_connection():
 def init_db():
     """Initializes the database schema if it doesn't exist."""
     # Check if the file exists at the container path
+    db_dir = os.path.dirname(DATABASE_PATH)
     if not os.path.exists(db_dir):
         print(f"Creating database directory: {db_dir}")
         os.makedirs(db_dir, exist_ok=True) # Ensure directory exists before connecting
