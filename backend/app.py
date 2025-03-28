@@ -47,19 +47,6 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour", "5 per minute"] # Adjust as needed
 )
 
-# --- Function to Initialize DB and Directories ---
-# Use Flask's app context to ensure this runs correctly
-@app.before_request
-def initialize_app():
-    # This check ensures it only runs ONCE per application startup process,
-    # not before every single request.
-    if not hasattr(app, '_initialized'):
-        print("Running one-time app initialization...")
-        database.init_db()
-        setup_directories()
-        app._initialized = True # Mark as initialized
-        print("Initialization complete.")
-
 # --- Helper Functions ---
 def allowed_file(filename):
     return '.' in filename and \
@@ -225,7 +212,8 @@ def send_completion_email(request_id):
 # --- Main Execution ---
 if __name__ == '__main__':
     print("Starting backend server...")
-    initialize_app()
+    database.init_db()    # Initialize DB schema on startup
+    setup_directories() # Create upload folders on startup
     # Use host='0.0.0.0' to make it accessible on your network
     # Use debug=True only for development, False for production-like testing
     app.run(host='0.0.0.0', port=5000, debug=True)

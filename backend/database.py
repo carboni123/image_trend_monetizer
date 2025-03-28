@@ -96,4 +96,4 @@ def get_request_by_id(req_id):
         return dict(request) if request else None
 
 # Ensure DB is initialized when this module is imported or run
-# init_db() # Call this explicitly from app.py instead
+init_db() # Call this explicitly from app.py instead
