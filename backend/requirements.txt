@@ -3,3 +3,6 @@ Werkzeug>=2.0
 Flask-Limiter>=2.0
 Flask-Mail>=0.9
 python-dotenv>=0.19
+gunicorn
+psycopg2-binary
+boto3

@@ -8,12 +8,11 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QPixmap
+from dotenv import load_dotenv
 
+load_dotenv()
 # --- Configuration ---
-# !!! IMPORTANT: Change this URL to where your backend is running !!!
-# If backend runs on the same machine: 'http://127.0.0.1:5000/submit'
-# If backend runs on another machine on the network: 'http://<backend-ip-address>:5000/submit'
-BACKEND_SUBMIT_URL = 'http://127.0.0.1:5000/submit'
+BACKEND_SUBMIT_URL = f"{os.getenv("BACKEND_DOMAIN")}/submit"
 PREVIEW_SIZE = 200 # Size for image previews in pixels
 
 class UserFrontendApp(QWidget):

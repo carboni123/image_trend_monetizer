@@ -1,0 +1,104 @@
+# image_trend_monetizer/backend/docker-compose.yml
+services:
+  backend:
+    build: .
+    container_name: image_trend_backend
+    restart: unless-stopped
+    networks:
+      - backend-net
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      minio-setup: 
+        condition: service_completed_successfully
+    ports:
+      - "5000:5000"
+
+  db:
+    image: postgres:17.4
+    container_name: image_trend_db
+    restart: unless-stopped
+    networks:
+      - backend-net
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Keep ports mapping if you need external access to DB for debugging
+    ports:
+      - "5432:5432"
+
+  minio:
+    image: minio/minio:latest # Use specific version if needed
+    container_name: image_trend_minio
+    restart: unless-stopped
+    networks:
+      - backend-net
+    volumes:
+      # Mount a host directory or named volume for MinIO data persistence
+      - minio_data:/data
+      # Example host mount (if you prefer seeing data directly on Pi):
+      # - ./minio_data:/data # Creates 'minio_data' folder next to docker-compose.yml
+    environment:
+      # Use root credentials from .env file
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001" # Start server, expose console on 9001
+
+  minio-setup:
+    image: minio/mc
+    depends_on:
+      - minio
+    networks:
+      - backend-net
+    environment:
+      # Point to the MinIO service within Docker (default values can be omitted if they match the script defaults)
+      MINIO_ENDPOINT_HOST: minio
+      MINIO_ENDPOINT_PORT: 9000
+      # Use root credentials for admin tasks (the script falls back to these if MINIO_ADMIN_* are not set)
+      MINIO_ADMIN_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_ADMIN_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      # Bucket name to be created/configured
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+      # Application-specific credentials (for creating/updating the app user)
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+    entrypoint: /bin/sh
+    command: /scripts/minio-init.sh
+    volumes:
+      - ./minio-init.sh:/scripts/minio-init.sh
+
+  db-init:
+    build: .
+    container_name: image_trend_db_init
+    restart: 'no'
+    networks:
+      - backend-net
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["flask", "init-db"]
+
+networks:
+  backend-net:
+    driver: bridge # Use default bridge driver if not external
+
+volumes:
+  pg_data:
+  minio_data: # Declare the named volume for MinIO
