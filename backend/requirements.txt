@@ -5,3 +5,4 @@ Flask-Mail>=0.9
 python-dotenv>=0.19
 gunicorn
 psycopg2-binary
+boto3

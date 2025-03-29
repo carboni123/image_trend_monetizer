@@ -1,6 +1,4 @@
 # image_trend_monetizer/backend/docker-compose.yml
-# Remove 'version:' line if desired
-
 services:
   backend:
     build: .
@@ -8,45 +6,61 @@ services:
     restart: unless-stopped
     networks:
       - backend-net
-    volumes:
-      # Mount uploads directory
-      - uploads_data:/app/uploads
-      # REMOVE the old database volume mount
     env_file:
       - .env
-    depends_on: # Make backend wait for db
-       db:
-         condition: service_healthy # Optional: Wait for healthcheck (see db service)
+    depends_on:
+      db:
+        condition: service_healthy
+      minio: # Make backend depend on MinIO too (optional, but good practice)
+        condition: service_started # MinIO doesn't have a simple healthcheck command like pg_isready by default
 
-  db: # New database service
-    image: postgres:15 # Or postgres:latest, or specific minor version
+  db:
+    image: postgres:latest
     container_name: image_trend_db
     restart: unless-stopped
     networks:
       - backend-net
     environment:
-      # These read from the .env file via ${VAR_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     volumes:
-      # Mount a new named volume for Postgres data persistence
       - pg_data:/var/lib/postgresql/data
-    # Optional Healthcheck: Allows 'depends_on' to wait more reliably
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
+    # Keep ports mapping if you need external access to DB for debugging
     ports:
       - "5432:5432"
 
+  minio: # <--- NEW MinIO Service --->
+    image: minio/minio:latest # Use specific version if needed
+    container_name: image_trend_minio
+    restart: unless-stopped
+    networks:
+      - backend-net
+    volumes:
+      # Mount a host directory or named volume for MinIO data persistence
+      - minio_data:/data
+      # Example host mount (if you prefer seeing data directly on Pi):
+      # - ./minio_data:/data # Creates 'minio_data' folder next to docker-compose.yml
+    environment:
+      # Use root credentials from .env file
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    ports:
+      # Map API port (9000) only if needed externally (usually not, accessed via Docker network)
+      # - "9000:9000"
+      # Map Console port (9001) to access the web UI from your browser
+      - "9001:9001"
+    command: server /data --console-address ":9001" # Start server, expose console on 9001
+
 networks:
   backend-net:
-    external: true
+    driver: bridge # Use default bridge driver if not external
 
 volumes:
-  uploads_data:
-  # Remove old volume if you are sure you don't need the data
-  # database_data:
-  pg_data: # Declare the new volume for Postgres
+  pg_data:
+  minio_data: # Declare the named volume for MinIO
