@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 import logging
 import boto3
 from botocore.exceptions import ClientError
+import click
 
 # --- Project Specific Imports ---
 import database
@@ -98,6 +99,16 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+# --- Flask CLI Command ---
+@app.cli.command('init-db')
+def init_db_command():
+    """Initialize the database (Create tables)."""
+    try:
+        click.echo('Attempting to initialize the database...')
+        database.init_db()
+        click.echo('Database initialization check completed successfully.')
+    except Exception as e:
+        click.echo(f'Error initializing database: {e}', err=True)
 
 # --- Routes ---
 @app.route('/submit', methods=['POST'])

@@ -15,7 +15,7 @@ services:
         condition: service_started # MinIO doesn't have a simple healthcheck command like pg_isready by default
 
   db:
-    image: postgres:latest
+    image: postgres:17.4
     container_name: image_trend_db
     restart: unless-stopped
     networks:

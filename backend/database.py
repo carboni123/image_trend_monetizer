@@ -113,9 +113,3 @@ def get_request_by_id(req_id):
         request = cur.fetchone()
         # RealDictCursor returns dict or None
         return request
-
-# --- Initialize DB when module is loaded ---
-# This remains a good place to ensure the table exists on startup
-print("Initializing DB from database.py module level (PostgreSQL)...")
-init_db()
-print("DB initialization attempt completed from database.py (PostgreSQL).")
