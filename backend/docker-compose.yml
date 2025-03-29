@@ -11,8 +11,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      minio: # Make backend depend on MinIO too (optional, but good practice)
-        condition: service_started # MinIO doesn't have a simple healthcheck command like pg_isready by default
+      minio:
+        condition: service_started
+      minio-setup: 
+        condition: service_completed_successfully
 
   db:
     image: postgres:17.4
@@ -35,7 +37,7 @@ services:
     ports:
       - "5432:5432"
 
-  minio: # <--- NEW MinIO Service --->
+  minio:
     image: minio/minio:latest # Use specific version if needed
     container_name: image_trend_minio
     restart: unless-stopped
@@ -51,11 +53,32 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     ports:
-      # Map API port (9000) only if needed externally (usually not, accessed via Docker network)
-      # - "9000:9000"
-      # Map Console port (9001) to access the web UI from your browser
+      - "9000:9000"
       - "9001:9001"
     command: server /data --console-address ":9001" # Start server, expose console on 9001
+
+  minio-setup:
+    image: minio/mc
+    depends_on:
+      - minio
+    networks:
+      - backend-net
+    environment:
+      # Point to the MinIO service within Docker (default values can be omitted if they match the script defaults)
+      MINIO_ENDPOINT_HOST: minio
+      MINIO_ENDPOINT_PORT: 9000
+      # Use root credentials for admin tasks (the script falls back to these if MINIO_ADMIN_* are not set)
+      MINIO_ADMIN_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_ADMIN_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      # Bucket name to be created/configured
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME}
+      # Application-specific credentials (for creating/updating the app user)
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+    entrypoint: /bin/sh
+    command: /scripts/minio-init.sh
+    volumes:
+      - ./minio-init.sh:/scripts/minio-init.sh
 
 networks:
   backend-net:

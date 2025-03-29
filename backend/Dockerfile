@@ -20,10 +20,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the backend application code into the container
 COPY . .
 
-# Create the uploads directory structure within the image
-# Although the volume mount will ultimately manage this space
-RUN mkdir -p /app/uploads/original /app/uploads/proof /app/uploads/edited
-
 # Make port 5000 available to the network *outside* this container
 # Flask default development server runs on 5000
 EXPOSE 5000

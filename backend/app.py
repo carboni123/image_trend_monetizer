@@ -9,6 +9,7 @@ from flask_mail import Mail, Message
 from dotenv import load_dotenv
 import logging
 import boto3
+from botocore.client import Config
 from botocore.exceptions import ClientError
 import click
 
@@ -56,11 +57,10 @@ if all([MINIO_ENDPOINT_URL, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_BUCKET_NAM
             endpoint_url=MINIO_ENDPOINT_URL,
             aws_access_key_id=MINIO_ACCESS_KEY,
             aws_secret_access_key=MINIO_SECRET_KEY,
-            config=boto3.session.Config(signature_version='s3v4'), # Good practice for MinIO
-            # verify=False # Uncomment if using HTTP and facing SSL issues (less secure)
+            config=Config(signature_version='s3v4'),
         )
         # Verify connection by trying to list buckets (optional)
-        # s3_client.list_buckets()
+        s3_client.list_buckets()
         app.logger.info(f"Successfully initialized S3 client for MinIO bucket '{MINIO_BUCKET_NAME}'.")
 
         # --- Ensure Bucket Exists ---
