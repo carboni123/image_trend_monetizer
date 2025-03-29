@@ -17,7 +17,7 @@ services:
         condition: service_completed_successfully
     ports:
       - "5000:5000"
-      
+
   db:
     image: postgres:17.4
     container_name: image_trend_db
@@ -81,6 +81,19 @@ services:
     command: /scripts/minio-init.sh
     volumes:
       - ./minio-init.sh:/scripts/minio-init.sh
+
+  db-init:
+    build: .
+    container_name: image_trend_db_init
+    restart: 'no'
+    networks:
+      - backend-net
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["flask", "init-db"]
 
 networks:
   backend-net:
