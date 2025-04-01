@@ -1,6 +1,7 @@
 // src/pages/SubmitPhotoPage.tsx
 import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const getStyleDisplayName = (slug: string | undefined): string => {
     if (!slug) return "Selected Style";
@@ -46,23 +47,35 @@ export default function SubmitPhotoPage() {
             return;
         }
         setIsSubmitting(true);
-        console.log("Submitting data:", {
-            style: styleSlug,
-            email,
-            photo: photoFile.name,
-            receipt: receiptFile.name,
-            message: requestMessage
-        });
-
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        const success = Math.random() > 0.3; // Simulate success/failure
-
-        if (success) {
-            navigate('/request-success'); // Navigate on success
-        } else {
+        
+        // Create FormData object for file upload
+        const formData = new FormData();
+        formData.append('email', email);
+        formData.append('description', `Style: ${styleDisplayName}. ${requestMessage}`);
+        formData.append('image', photoFile);
+        formData.append('payment_proof', receiptFile);
+        
+        try {
+            // Send request to backend
+            const response = await axios.post('/api/submit', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            
+            console.log("Submission successful:", response.data);
+            
+            // Navigate to success page with request ID
+            navigate('/request-success', { 
+                state: { 
+                    requestId: response.data.request_id,
+                    email: email
+                } 
+            });
+        } catch (error) {
+            console.error("Submission error:", error);
             setSubmitStatus('Submission failed. Please check your details or try again later.');
-            setIsSubmitting(false); // Only set false on failure, as navigation handles success state change
+            setIsSubmitting(false);
         }
     };
 
