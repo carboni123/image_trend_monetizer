@@ -167,3 +167,4 @@ config.ini
 /examples
 /backend/uploads
 backend/waitlist.db
+frontend/package-lock.json
